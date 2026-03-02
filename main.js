@@ -9,9 +9,9 @@ const main = async () => {
   const messages = createMessage(Deno.args);
   try {
     const result = await runAgent(messages);
-    logger(`FINAL OUTPUT : ${result}`);
+    console.log("FINAL OUTPUT", result);
   } catch (err) {
-    logger(`AGENT ERROR : ${err.message}`);
+    logger(["AGENT ERROR", err.message]);
   }
 };
 

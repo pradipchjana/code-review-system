@@ -1,5 +1,5 @@
 import { callLLM } from "./olama.js";
-import { executeToolCall } from "./tools.js";
+import { executeToolCall } from "./handler.js";
 import { tools } from "./tools_list.js";
 
 export const logger = (msgs) => {
@@ -7,7 +7,8 @@ export const logger = (msgs) => {
 };
 
 export const runAgent = async (messages) => {
-  while (true) {
+  let steps = 0;
+  while (steps < 20) {
     logger(["CALLING LLM...."]);
     const res = await callLLM(messages, tools);
     messages.push(res.message);
@@ -20,11 +21,12 @@ export const runAgent = async (messages) => {
       break;
     }
 
-    const toolCall = toolCalls.at(-1);
+    const toolCall = toolCalls[0];
     logger(["Calling", toolCall.function.name]);
 
     await executeToolCall(toolCall, messages);
+    steps++;
   }
 
-  return messages.at(-1).content;
+  return messages.at(-1)?.content;
 };

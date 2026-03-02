@@ -1,61 +1,104 @@
 import { logger } from "./agent.js";
+import { walk } from "@std/fs/walk";
 
-const decoder = new TextDecoder();
+const decoder = (msg) => new TextDecoder().decode(msg);
 
-export const prepareRepo = async ({ repo, username }) => {
-  const repoPath = `./${repo}`;
-  logger("INSIDE PREPARE REPO");
-  logger(["ARGS:", repo, username]);
+const createOuputMsg = (output) => {
+  if (output.code !== 0) return decoder(output.stderr);
+  return decoder(output.stdout);
+};
+
+export const cloneRepo = async ({ repo, username }) => {
+  const repoName = `${repo}-${username}`;
+  const repoPath = `git-clones/${repoName}`;
+
+  logger("INSIDE CLONE REPO");
+  logger(["ARGS:", repo, username, repoPath]);
+
   try {
-    const fileInfo = await Deno.stat(repoPath);
-    if (fileInfo.isDirectory) {
-      return "Directory is already present";
+    const stat = await Deno.stat(repoPath);
+    if (stat.isDirectory) {
+      return "Directory already present";
     }
-  } catch {
-    const url = `https://github.com/step-batch-11/${repo}-${username}.git`;
-    const cmd = new Deno.Command("git", {
-      args: ["clone", url],
+  } catch (err) {
+    if (err instanceof Deno.errors.NotFound) {
+      const token = Deno.env.get("GITHUB_TOKEN");
+      const url =
+        `https://${token}@github.com/step-batch-11/${repo}-${username}.git`;
+
+      logger(["ATTEMPTING TO CLONE URL:", url]);
+      const gitCloneCommand = new Deno.Command("git", {
+        args: ["clone", url, repoPath],
+        stdout: "piped",
+        stderr: "piped",
+        env: {
+          GIT_TERMINAL_PROMPT: "0", //Fails don't ask for credientials
+        },
+      });
+
+      const output = await gitCloneCommand.output();
+      return createOuputMsg(output);
+    }
+    return err.message;
+  }
+};
+
+export const getDirectoryStructure = async ({ repo, username }) => {
+  logger(["INSIDE DIRECTORY STRUCTURE"]);
+  const repoName = `${repo}-${username}`;
+  const repoPath = `git-clones/${repoName}`;
+  logger(["REPO", repoName, repoPath]);
+  const entries = await Array.fromAsync(walk(repoPath, { skip: [/\.git/] }));
+
+  logger(["ENTRIES", entries]);
+  const filePaths = entries.map((entry) => entry.path);
+  logger(["FILEPATHS", filePaths]);
+  return filePaths.join("\n");
+};
+
+export const readFile = async ({ repo, username, fileName }) => {
+  logger(["INSIDE READFILE TOOL"]);
+  const repoName = `${repo}-${username}`;
+  const filePath = `git-clones/${repoName}/${fileName}`;
+
+  try {
+    const content = await Deno.readTextFile(filePath);
+    return content;
+  } catch (error) {
+    return `Failed to read file: ${error.message}`;
+  }
+};
+
+export const writeFile = async ({ repo, username, fileName, content }) => {
+  logger(["INSIDE WRITE FILE"]);
+  const repoName = `${repo}-${username}`;
+  const filePath = `git-clones/${repoName}/${fileName}`;
+  try {
+    await Deno.writeTextFile(filePath, content);
+    logger(["FILE WRITTEN"]);
+    return `Successfully wrote the ${fileName} at ${filePath}`;
+  } catch (error) {
+    logger(["THREW ERROR"]);
+    return `Failed to write the file: ${error.message}`;
+  }
+};
+
+export const testCoverage = async ({ repo, username }) => {
+  logger(["INSIDE TEST COVERAGE FILE"]);
+  const repoName = `${repo}-${username}`;
+  const filePath = `git-clones/${repoName}`;
+
+  try {
+    const command = new Deno.Command("deno", {
+      args: ["test", "--coverage"],
+      cwd: filePath,
       stdout: "piped",
       stderr: "piped",
     });
 
-    const output = await cmd.output();
-    if (output.code !== 0) {
-      return decoder.decode(output.stderr);
-    }
-    return decoder.decode(output.stdout);
+    const output = await command.output();
+    return createOuputMsg(output);
+  } catch (error) {
+    return `Failed to run the test: ${error.message}`;
   }
-};
-
-export const getDirectoryStructure = () => {
-  logger("INSIDE DIRECTORY STRUCTURE");
-};
-
-const generateMsg = (toolMessage, toolCall) => ({
-  role: "tool",
-  content: toolMessage,
-  tool_call_id: toolCall.id,
-});
-
-const toolRegistry = {
-  prepareRepo,
-  getDirectoryStructure,
-};
-
-export const executeToolCall = async (toolCall, messages) => {
-  logger(["INSIDE EXECUTE TOOL CALL"]);
-
-  const toolName = toolCall.function.name;
-  const tool = toolRegistry[toolName];
-
-  logger(["TOOL:", tool]);
-
-  if (!tool) {
-    return messages.push(`Unknown tool: ${toolName}`);
-  }
-
-  const result = await tool(toolCall.function.arguments);
-
-  const toolMsg = generateMsg(result, toolCall);
-  messages.push(toolMsg);
 };
