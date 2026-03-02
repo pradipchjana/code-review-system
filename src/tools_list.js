@@ -15,7 +15,7 @@ export const tools = [
           username: {
             type: "string",
             description:
-              "The github username of the owner of targetted git repo provided",
+              "The github username of the owner of targeted git repo provided",
           },
         },
       },
