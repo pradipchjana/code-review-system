@@ -15,8 +15,7 @@ export const callLLM = async (messages, tools) => {
 };
 
 export const createMessage = (args) => {
-  const content = args.join(" ");
-  if (!content) {
+  if (!args) {
     console.log("Please provide a prompt");
     Deno.exit(1);
   }
@@ -30,7 +29,7 @@ export const createMessage = (args) => {
     Call ONE tool at a time, wait for the system to return the result, and then decide on your next tool call.
     Your goal is to provide a structured, evidence-based code review of a Git repository using ONLY the provided tools.
 
-    Follow this workflow sequentially:
+    Follow this exact workflow sequentially:
     1. Fetch the repository: Use the cloneRepo tool.
     2. Analyze the stack: Use the getDirectoryStructure tool to identify the primary technologies.
     3. Read the code: Identify the most critical source files from the directory structure. Use the readFile tool to read them. You MUST call readFile ONE at a time. Do not try to read everything.
@@ -39,6 +38,13 @@ export const createMessage = (args) => {
        - For standard programming languages: Focus on logic, clean code, performance, and bugs.
     5. Generate the report: Stop using tools. Output your final code review directly to the user as a Markdown-formatted response.
  
+    STRICT TOOL RULES:
+    - Call tools ONE at a time. Follow sequenctial call rather than parallel. Do not execute multiple tools simultaneously.
+    - NEVER guess file names. ONLY use exact file paths returned by getDirectoryStructure.
+    - NEVER use wildcards (like *.js or *.html) in the readFile tool.
+    - Do NOT attempt to run tests, linters, or execute code.
+    - Do NOT attempt to save or write files to disk. Your final output must be pure Markdown text.
+
     REPORT FORMAT:
     Your final Markdown response must include:
     - Project Overview: Tech stack and structure summary.
@@ -50,7 +56,7 @@ export const createMessage = (args) => {
     },
     {
       role: "user",
-      content,
+      content: args,
     },
   ];
 };

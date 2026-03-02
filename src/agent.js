@@ -7,14 +7,40 @@ export const logger = (msgs) => {
 };
 
 export const runAgent = async (messages) => {
-  let steps = 0;
-  while (steps < 20) {
+  while (true) {
     logger(["CALLING LLM...."]);
     const res = await callLLM(messages, tools);
-    messages.push(res.message);
+    // let toolCalls = res.tool_calls || [];
+
+    logger(["MESSAGE", messages]);
+    logger(["RESPONSE", res]);
+
+    if (
+      toolCalls.length === 0 && content.includes('"name":') &&
+      content.includes('"parameters":')
+    ) {
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/); //matches the open and close braces
+        if (jsonMatch) {
+          const parsedJSON = JSON.parse(jsonMatch);
+          if (parsedJSON.name && parsedJSON.parameters) {
+            toolCalls = [{
+              function: {
+                name: parsedJSON.name,
+                arguments: parsedJSON.parameters,
+              },
+            }];
+            res.content = "";
+          }
+        }
+      } catch {
+        logger(["Failed to parse the hallucinated JSON: ", error.message]);
+      }
+    }
 
     const toolCalls = res.message.tool_calls || [];
     logger(["TOOLS CALL", toolCalls]);
+    messages.push(res.message);
 
     if (toolCalls.length === 0) {
       logger(["NO TOOL CALL....", toolCalls]);
@@ -25,7 +51,6 @@ export const runAgent = async (messages) => {
     logger(["Calling", toolCall.function.name]);
 
     await executeToolCall(toolCall, messages);
-    steps++;
   }
 
   return messages.at(-1)?.content;
