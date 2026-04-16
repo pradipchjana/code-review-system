@@ -1,4 +1,3 @@
-import { logger } from "./agent.js";
 import {
   cloneRepo,
   getDirectoryStructure,
@@ -22,12 +21,8 @@ const toolRegistry = {
 };
 
 export const executeToolCall = async (toolCall, messages) => {
-  logger(["INSIDE EXECUTE TOOL CALL"]);
-
   const toolName = toolCall.function.name;
   const tool = toolRegistry[toolName];
-
-  logger(["TOOL:", tool]);
 
   if (!tool) {
     messages.push({
@@ -41,7 +36,6 @@ export const executeToolCall = async (toolCall, messages) => {
     ? JSON.parse(toolCall.function.arguments)
     : toolCall.function.arguments;
 
-  logger(["ARGS", args]);
   const msg = await tool(args);
   const toolMsg = generateMsg(msg, toolCall);
   messages.push(toolMsg);

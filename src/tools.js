@@ -1,9 +1,8 @@
-import { logger } from "./agent.js";
 import { walk } from "@std/fs/walk";
 
 const decoder = (msg) => new TextDecoder().decode(msg);
 
-const createOuputMsg = (output) => {
+const createOutputMsg = (output) => {
   if (output.code !== 0) return decoder(output.stderr);
   return decoder(output.stdout);
 };
@@ -11,9 +10,6 @@ const createOuputMsg = (output) => {
 export const cloneRepo = async ({ repo, username }) => {
   const repoName = `${repo}-${username}`;
   const repoPath = `git-clones/${repoName}`;
-
-  logger("INSIDE CLONE REPO");
-  logger(["ARGS:", repo, username, repoPath]);
 
   try {
     const stat = await Deno.stat(repoPath);
@@ -26,7 +22,6 @@ export const cloneRepo = async ({ repo, username }) => {
       const url =
         `https://${token}@github.com/step-batch-11/${repo}-${username}.git`;
 
-      logger(["ATTEMPTING TO CLONE URL:", url]);
       const gitCloneCommand = new Deno.Command("git", {
         args: ["clone", url, repoPath],
         stdout: "piped",
@@ -37,27 +32,25 @@ export const cloneRepo = async ({ repo, username }) => {
       });
 
       const output = await gitCloneCommand.output();
-      return createOuputMsg(output);
+      return createOutputMsg(output);
     }
     return err.message;
   }
 };
 
 export const getDirectoryStructure = async ({ repo, username }) => {
-  logger(["INSIDE DIRECTORY STRUCTURE"]);
   const repoName = `${repo}-${username}`;
   const repoPath = `git-clones/${repoName}`;
-  logger(["REPO", repoName, repoPath]);
   const entries = await Array.fromAsync(walk(repoPath, { skip: [/\.git/] }));
 
-  logger(["ENTRIES", entries]);
   const filePaths = entries.map((entry) => entry.path);
-  logger(["FILEPATHS", filePaths]);
   return filePaths.join("\n");
 };
 
+// console.log(await getDirectoryStructure({repo:"html-semantic",username:"pradipchjana"}));
+
+
 export const readFile = async ({ repo, username, fileName }) => {
-  logger(["INSIDE READFILE TOOL"]);
   const repoName = `${repo}-${username}`;
   const filePath = `git-clones/${repoName}/${fileName}`;
 
@@ -70,21 +63,17 @@ export const readFile = async ({ repo, username, fileName }) => {
 };
 
 export const writeFile = async ({ repo, username, fileName, content }) => {
-  logger(["INSIDE WRITE FILE"]);
   const repoName = `${repo}-${username}`;
   const filePath = `git-clones/${repoName}/${fileName}`;
   try {
     await Deno.writeTextFile(filePath, content);
-    logger(["FILE WRITTEN"]);
     return `Successfully wrote the ${fileName} at ${filePath}`;
   } catch (error) {
-    logger(["THREW ERROR"]);
     return `Failed to write the file: ${error.message}`;
   }
 };
 
 export const testCoverage = async ({ repo, username }) => {
-  logger(["INSIDE TEST COVERAGE FILE"]);
   const repoName = `${repo}-${username}`;
   const filePath = `git-clones/${repoName}`;
 
@@ -97,7 +86,7 @@ export const testCoverage = async ({ repo, username }) => {
     });
 
     const output = await command.output();
-    return createOuputMsg(output);
+    return createOutputMsg(output);
   } catch (error) {
     return `Failed to run the test: ${error.message}`;
   }

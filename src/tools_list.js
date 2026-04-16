@@ -29,7 +29,7 @@ export const tools = [
       name: "getDirectoryStructure",
       description:
         "Returns the complete directory structure of the specified repository as text, exactly as shown by the 'tree' command. \
-        The repository is assumed to be located under 'git-clones/' .",
+        The repository is assumed to be located under 'git-clones/' . If the repository does not exist locally, it clones it from GitHub.",
       parameters: {
         type: "object",
         required: ["repo", "username"],
