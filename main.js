@@ -6,7 +6,7 @@ const logger = (msg) => {
 };
 
 const main = async () => {
-  const messages = createMessage(Deno.args);
+  const messages = createMessage(Deno.args[0]);
   try {
     const result = await runAgent(messages);
     console.log("FINAL OUTPUT", result);

@@ -7,14 +7,16 @@ export const logger = (...msgs) => {
 };
 
 export const runAgent = async (messages) => {
-  let steps = 0;
-  while (steps < 20) {
-    logger("CALLING LLM....");
+  while (true) {
+    logger(["CALLING LLM...."]);
     const res = await callLLM(messages, tools);
+    const toolCalls = res.tool_calls || [];
+
+    logger(["MESSAGE", messages]);
+    logger(["RESPONSE", res]);
+
+    logger(["TOOLS CALL", toolCalls]);
     messages.push(res.message);
-    console.log(res);
-    const toolCalls = res.message.tool_calls || [];
-    logger("TOOLS CALL", toolCalls);
 
     if (toolCalls.length === 0) {
       logger("NO TOOL CALL....", toolCalls);
@@ -25,8 +27,7 @@ export const runAgent = async (messages) => {
     logger("Calling", toolCall.function.name);
 
     await executeToolCall(toolCall, messages);
-    steps++;
   }
 
-  return messages.at(-1)?.content;
+  return messages.at(-1).content;
 };

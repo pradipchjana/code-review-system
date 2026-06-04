@@ -32,6 +32,7 @@ export const executeToolCall = async (toolCall, messages) => {
     });
     return;
   }
+
   const args = typeof toolCall.function.arguments === "string"
     ? JSON.parse(toolCall.function.arguments)
     : toolCall.function.arguments;
