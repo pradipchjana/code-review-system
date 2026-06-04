@@ -46,6 +46,8 @@ export const createMessage = (args) => {
     - Risk Assessment & Key Findings.
     - Final Score (0-100).
     - Prioritized Improvement Roadmap.
+
+    Add the next required tool call in a key "tool_calls" in message 
     `,
     },
     {
